@@ -2,10 +2,9 @@
     import { currentUser } from "$lib/store";
     import {PUBLIC_POCKETBASE_URL} from '$env/static/public'
     import { onMount } from "svelte";
-  import { logout } from "$lib/utils/auth";
+    import { logout } from "$lib/utils/auth";
 
     const userAvatar = PUBLIC_POCKETBASE_URL + "/api/files/_pb_users_auth_" 
-
 
 </script>
 <section>

@@ -9,7 +9,13 @@
         name: "Répondre en tant qu'assistant",
         description: "Répondre en tant qu'assistant",
         url: "/prompt/assistant",
+    },
+    {
+        name: "Répondre en tant qu'utilisateur",
+        description: "Répondre en tant qu'utilisateur",
+        url: "/prompt/user",
     }
+
  ]
 </script>
 <section class="flex space-x-5">

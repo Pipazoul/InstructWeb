@@ -12,7 +12,9 @@
     });
 
   </script>
-    <Nav />
-    <div class="m-14">
-      <slot/>
-    </div>
+    <html data-theme="dracula" lang="fr">
+      <Nav />
+      <div class="m-14 h-screen">
+        <slot/>
+      </div>
+    </html>
