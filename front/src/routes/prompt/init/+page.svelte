@@ -7,6 +7,6 @@
 <section>
     <Title title="Premiere prompt" />
     <div class="flex justify-center">
-        <WritePrompt />
+        <WritePrompt promptType="user" />
     </div>
 </section>

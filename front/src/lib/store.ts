@@ -8,6 +8,7 @@ export const pb = new PocketBase(PUBLIC_POCKETBASE_URL);
 
 export const currentUser = writable(pb.authStore.model);
 export const currentConversationTree = writable([]);
+export const currentPrompts = writable([]);
 
 pb.authStore.onChange(() => {
     currentUser.set(pb.authStore.model);
@@ -44,6 +45,29 @@ export async function watchConversationTreeChange() {
         }
         if (action === "delete") {
             currentConversationTree.set(get(currentConversationTree).filter(conversationTree => conversationTree.id !== record.id));
+        }
+    });   
+}
+
+export async function watchPromptsChange() {
+    const initialPrompts = await pb.collection("prompts").getFullList();
+
+    currentPrompts.set(initialPrompts);
+    // subscribe to the user data
+    pb.collection("prompts").subscribe('*', async ({action,  record}) => {
+        if (action === "update") {
+            currentPrompts.set(get(currentPrompts).map(prompt => {
+                if (prompt.id === record.id) {
+                    return record;
+                }
+                return prompt;
+            }));
+        }
+        if (action === "create") {
+            currentPrompts.set([...get(currentPrompts), record]);
+        }
+        if (action === "delete") {
+            currentPrompts.set(get(currentPrompts).filter(prompt => prompt.id !== record.id));
         }
     });   
 }
