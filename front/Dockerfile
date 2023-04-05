@@ -12,7 +12,7 @@ COPY postcss.config.js /app/postcss.config.js
 COPY svelte.config.js /app/svelte.config.js
 COPY tailwind.config.js /app/tailwind.config.js
 COPY tsconfig.json /app/tsconfig.json
-COPY vite.config.js /app/vite.config.js
+COPY vite.config.ts /app/vite.config.ts
 
 RUN npm install
 
