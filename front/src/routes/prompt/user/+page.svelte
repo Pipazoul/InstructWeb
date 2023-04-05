@@ -2,177 +2,78 @@
     import Title from "$lib/components/misc/Title.svelte";
   import WritePrompt from "$lib/components/WritePrompt.svelte";
     import { currentConversationTree, currentPrompts } from "$lib/store";
-    import type {ConversationsTreeRecord} from "$lib/types/pocketbase-types";
+    import type {ConversationTree} from "$lib/types/conversationTree";
+    import type {Prompt} from "$lib/types/prompt";
     import { onMount } from "svelte";
+    import { getFilledTrees, pairTrees, chooseImpairTrees } from "$lib/utils/trees";
 
-    let currentConversation = [];
-    let availableTrees = [];
-    let treeNumber = -1;
-    let treeBuffer = [];
+    let currentConversation: ConversationTree = {
+        id: "",
+        initPrompt: "",
+        initPromptType: "",
+        tree_1: [],
+        tree_2: [],
+        tree_3: [],
+        tree_4: [],
+    }
+    let availableTrees: Array<ConversationTree> = [];
+    let treeNumber: Number;
+    let treeBuffer: Array = [];
     let locked = false;
 
-      // for eaach conversationTree, if one of tree_1 / tree_2 / tree_3 is null, then add it to availableTrees
+      //
       $: {
         if ($currentConversationTree) {
-          for (let conversationTree of $currentConversationTree) {
-            let push = false;
-            if (conversationTree.tree_1[0]) {
-              push = true;
-            }
-            if (conversationTree.tree_2[0]) {
-              push = true;
-            }
-            if (conversationTree.tree_3[0]) {
-              push = true;
-            }
-            if (conversationTree.tree_4[0]) {
-              push = true;
-            }
-            if (push) {
-              availableTrees = [...availableTrees, conversationTree];
-              console.log("pushed", conversationTree);
-            }
-          }
-        }
-      }
+            availableTrees = getFilledTrees($currentConversationTree);
+            availableTrees = pairTrees(availableTrees);
+            
+            // currentConversation = availableTrees[randomNumber];
+            let selectConversation = availableTrees[ Math.floor(Math.random() * availableTrees.length) ];
 
-      $: {
-        if(!locked) {
-            if (availableTrees.length > 0) {
-                // get for each tree array number to be a pair number
-                
-                availableTrees.forEach(item => {
-                    let push = false;
-                    console.log("item", item);
-                   // check if tree_1 length is pair or equals 1
-                    if (item.tree_1.length % 2 === 0 || item.tree_1.length === 1) {
-                        console.log("tree_1 is pair or equals 1");
-                        push = true;
-                        currentConversation = item;
-                        treeNumber = 1;
-                    } else {
-                        console.log("tree_1 is not pair or equals 1");
+            if(selectConversation) {
+
+                // get initPrompt text from id
+                $currentPrompts.forEach(prompt => {
+                    if (selectConversation.initPrompt === prompt.id) {
+                        selectConversation.initPrompt = prompt.prompt;
+                        selectConversation.initPromptType = prompt.type;
                     }
-                    // check if tree_2 length is pair or equals 1
-                    if (item.tree_2.length % 2 === 0 || item.tree_2.length === 1) {
-                        console.log("tree_2 is pair or equals 1");
-                        push = true;
-                        currentConversation = item;
-                        treeNumber = 2;
+                });
 
-                    } else {
-                        console.log("tree_2 is not pair or equals 1");
-                    }
-                    // check if tree_3 length is pair or equals 1
-                    if (item.tree_3.length % 2 === 0 || item.tree_3.length === 1) {
-                        console.log("tree_3 is pair or equals 1");
-                        push = true;
-                        currentConversation = item;
-                        treeNumber = 3;
+                let selectTree = chooseImpairTrees(selectConversation);
+                // get prompt from id
+                treeBuffer = [];
+                //choose random tree
+                selectTree = selectTree[Math.floor(Math.random() * selectTree.length)];
+                console.log("selectTree", selectTree);
+                treeNumber = selectTree.treeNumber;
 
-                    } else {
-                        console.log("tree_3 is not pair or equals 1");
-                    }
-                    // check if tree_4 length is pair or equals 1
-                    if (item.tree_4.length % 2 === 0 || item.tree_4.length === 1) {
-                        console.log("tree_4 is pair or equals 1");
-                        push = true;
-                        currentConversation = item;
-                        treeNumber = 4;
+                selectTree.tree.forEach(id => {
+                    $currentPrompts.forEach(prompt => {
+                        if (id === prompt.id) {
+                            treeBuffer = [...treeBuffer, {id: id, prompt: prompt.prompt, type: prompt.type}];
+                        }
+                    });
+                });
 
-                    } else {
-                        console.log("tree_4 is not pair or equals 1");
-                    }
-
-                    if (push) {
-                        console.log("pushed", item);
-                        // replace the existing conversationTree with the new one
-                        
-                        
-                        locked = true;
-
-                    }
+                // add prompt to currentConversation
+                currentConversation = {
+                    id: selectConversation.id,
+                    initPrompt: selectConversation.initPrompt,
+                    initPromptType: selectConversation.initPromptType,
+                    currentTree: treeBuffer
                    
-                });
-
-                console.log("currentConversation", currentConversation);
-
+                }
 
                 
-                $currentPrompts.forEach(item => {
-                    if (currentConversation.initPrompt === item.id) {
-                        currentConversation.initPrompt = item.prompt;
-                        currentConversation.initPromptType = item.type;
-                    }
-                });
-
-               if(treeNumber === 1) {
-                     currentConversation.tree_1.forEach((item, i) => {
-                        console.log("for", item);
-                        $currentPrompts.forEach(prompt => {
-                            console.log("if item === prompt.id", item === prompt.id);
-                            if (item === prompt.id) {
-                                currentConversation.tree_1[i] = prompt.prompt;
-                                treeBuffer = [...treeBuffer, prompt.prompt];
-                                console.log("LOOOL", item);
-                            }
-                        });
-                    });
-                }
-                if(treeNumber === 2) {
-                     currentConversation.tree_2.forEach((item, i) => {
-                        console.log("for", item);
-                        $currentPrompts.forEach(prompt => {
-                            console.log("if item === prompt.id", item === prompt.id);
-                            if (item === prompt.id) {
-                                currentConversation.tree_2[i] = prompt.prompt;
-                                treeBuffer = [...treeBuffer, prompt.prompt];
-                                console.log("LOOOL", item);
-                            }
-                        });
-                    });
-                }
-                if(treeNumber === 3) {
-                     currentConversation.tree_3.forEach((item, i) => {
-                        console.log("for", item);
-                        $currentPrompts.forEach(prompt => {
-                            console.log("if item === prompt.id", item === prompt.id);
-                            if (item === prompt.id) {
-                                currentConversation.tree_3[i] = prompt.prompt;
-                                treeBuffer = [...treeBuffer, prompt.prompt];
-                                console.log("LOOOL", item);
-                            }
-                        });
-                    });
-                }
-                if(treeNumber === 4) {
-                     currentConversation.tree_4.forEach((item, i) => {
-                        console.log("for", item);
-                        $currentPrompts.forEach(prompt => {
-                            console.log("if item === prompt.id", item === prompt.id);
-                            if (item === prompt.id) {
-                                currentConversation.tree_4[i] = prompt.prompt;
-                                treeBuffer = [...treeBuffer, prompt.prompt];
-                                
-                                console.log("LOOOL", item);
-                            }
-                        });
-                    });
-                }
-
-                console.log("treeBuffer", treeBuffer);
-
-                locked = true;
             }
         }
       }
-
-    
-    
 
     $: console.log("currentConversationTree", $currentConversationTree);
     $: console.log("availableTrees", availableTrees);
     $: console.log("currentConversation", currentConversation);
+    $: console.log("treeNumber", treeNumber);
 
 
 </script>
@@ -185,17 +86,21 @@
         </div>
         <div class="chat-bubble chat-bubble-primary"> {currentConversation.initPrompt}</div>
     </div>
-        {#each treeBuffer as prompt}
-        <div class="chat chat-end">
+        {#each currentConversation.currentTree as item}
+        <div class="chat chat-{item.type === "assistant" ? "end" : "start"}">
             <div class="chat-header">
-                assistant
+                {item.type}
             </div>
-            <div class="chat-bubble chat-bubble-primary"> {prompt}</div>
+            <div class="chat-bubble chat-bubble-primary"> {item.prompt}</div>
         </div>
         {/each}
     
     <WritePrompt promptType="user" writeToTree={true} treeNumber={treeNumber} conversationTreeId={currentConversation.id} />
     {:else}
-        Plus de conversation à répondre
+        <div class="alert alert-info shadow-lg">
+            Plus de conversation à répondre pour le moment <br>
+            Mais vous pouvez toujours en créer une nouvelle prompt 
+            <a class="btn bg-primary" href="/prompt/init">Commencer</a>
+        </div>
     {/if}
 </section>

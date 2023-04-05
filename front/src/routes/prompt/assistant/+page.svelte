@@ -2,72 +2,97 @@
     import Title from "$lib/components/misc/Title.svelte";
   import WritePrompt from "$lib/components/WritePrompt.svelte";
     import { currentConversationTree, currentPrompts } from "$lib/store";
-    import type {ConversationsTreeRecord} from "$lib/types/pocketbase-types";
+    import type {ConversationTree} from "$lib/types/conversationTree";
+    import type {Prompt} from "$lib/types/prompt";
     import { onMount } from "svelte";
+    import { getEmptyTrees, getFilledTrees, choosePairTrees} from "$lib/utils/trees";
+    
 
-    let currentConversation = {};
-    let availableTrees = [];
-    let treeNumber = 0;
-    let locked = false;
+    let currentConversation: ConversationTree = {
+        id: "",
+        initPrompt: "",
+        initPromptType: "",
+        tree_1: [],
+        tree_2: [],
+        tree_3: [],
+        tree_4: [],
+    }
+    let availableTre
+    let availableTrees: Array<Object> = [];
+    let treeNumber: number = 0;
+    let locked: boolean = false;
 
       // for eaach conversationTree, if one of tree_1 / tree_2 / tree_3 is null, then add it to availableTrees
       $: {
         if ($currentConversationTree) {
-          for (let conversationTree of $currentConversationTree) {
-            let push = false;
-            if (!conversationTree.tree_1[0]) {
-              push = true;
-            }
-            if (!conversationTree.tree_2[0]) {
-              push = true;
-            }
-            if (!conversationTree.tree_3[0]) {
-              push = true;
-            }
-            if (!conversationTree.tree_4[0]) {
-              push = true;
-            }
-            if (push) {
-              availableTrees = [...availableTrees, conversationTree];
-              console.log("pushed", conversationTree);
+          let availableEmptyTrees = getEmptyTrees($currentConversationTree);
+          let availableFilledTrees = getFilledTrees($currentConversationTree);
+          let filteredAvailableFilledTrees = [];
+
+          availableFilledTrees.forEach(item => {
+            let pairTree = choosePairTrees(item);
+            item.currentTree = pairTree;
+            filteredAvailableFilledTrees = [...filteredAvailableFilledTrees, item];
+            
+          });
+
+          availableTrees = [...availableEmptyTrees, ...filteredAvailableFilledTrees];
+
+          //currentConversation = availableTrees[randomNumber];
+          let selectConversation = availableTrees[ Math.floor(Math.random() * availableTrees.length) ];
+
+          console.log("selectConversation", selectConversation);
+          // set currentTree for selected conversation
+          if(selectConversation) {
+            // get initPrompt text from id
+            $currentPrompts.forEach(prompt => {
+              if (selectConversation.initPrompt === prompt.id) {
+                selectConversation.initPrompt = prompt.prompt;
+                selectConversation.initPromptType = prompt.type;
+              }
+            });
+        
+            if (selectConversation.currentTree) {
+              // get prompt from id
+              let treeBuffer = [];
+              selectConversation.currentTree.forEach((items,i )=> {
+                console.log("il y a des items", items);
+                items.tree.forEach(item => {
+                $currentPrompts.forEach(prompt => {
+                  if (item === prompt.id) {
+                    console.log("item", prompt.prompt);
+                    let newItem = {id: item, prompt: prompt.prompt, type: prompt.type};
+                    
+                    treeBuffer = [...treeBuffer, newItem];
+                  }
+                });
+                selectConversation.currentTree = treeBuffer;
+                  
+                });
+              });
+              currentConversation = selectConversation;
+              treeNumber = selectConversation.currentTree.treeNumber;
+
+            } else {
+              // if you are here, it means that the conversationTree is not pair or empty
+              console.log("HOHo tien")
+              // choose random tree only if empty and add it to currentConversation.currentTree
+              for (let i = 1; i < 4; i++) {
+                if (!selectConversation["tree_" + i][0]) {
+                  treeNumber = i;
+                }
+              }
+              selectConversation.currentTree = selectConversation["tree_" + treeNumber];
+              currentConversation = selectConversation;
+
             }
           }
+
         }
       }
 
-      $: {
-        if(!locked) {
-            if (availableTrees.length > 0) {
-                // get random conversationTree
-                let conv = availableTrees[Math.floor(Math.random() * availableTrees.length)];
 
-                // check if tree_1 is null or not
-                if (!conv.tree_1[0]) {
-                    treeNumber = 1;
-                } else if (!conv.tree_2[0]) {
-                    treeNumber = 2;
-                } else if (!conv.tree_3[0]) {
-                    treeNumber = 3;
-                } else if (!conv.tree_4[0]) {
-                    treeNumber = 4;
-                }
-                $currentPrompts.forEach(item => {
-                    if (conv.initPrompt === item.id) {
-                            conv.initPrompt = item.prompt;
-                            conv.initPromptType = item.type;
-
-                    }
-                });
-                currentConversation = conv;
-                locked = true;
-            }
-        }
-      }
-    
-
-    $: console.log("currentConversationTree", $currentConversationTree);
-    $: console.log("availableTrees", availableTrees);
-    $: console.log("currentConversation", currentConversation);
+    $: console.log("treeNumber", treeNumber);
 
 
 </script>
@@ -80,8 +105,21 @@
         </div>
         <div class="chat-bubble chat-bubble-primary"> {currentConversation.initPrompt}</div>
     </div>
+        {#each currentConversation?.currentTree as item}
+        <div class="chat chat-{item.type === "assistant" ? "end" : "start"}">
+            <div class="chat-header">
+                {item.type}
+            </div>
+            <div class="chat-bubble chat-bubble-primary"> {item.prompt}</div>
+        </div>
+        {/each}
+    
     <WritePrompt promptType="assistant" writeToTree={true} treeNumber={treeNumber} conversationTreeId={currentConversation.id} />
     {:else}
-        Plus de conversation à répondre
+        <div class="alert alert-info shadow-lg">
+            Plus de conversation à répondre pour le moment <br>
+            Mais vous pouvez toujours en créer une nouvelle prompt 
+            <a class="btn bg-primary" href="/prompt/init">Commencer</a>
+        </div>
     {/if}
 </section>
